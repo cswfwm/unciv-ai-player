@@ -8,7 +8,9 @@ import com.unciv.logic.llm.LlmDecisionGranularity
 import com.unciv.logic.llm.LlmSettingsHolder
 import com.unciv.logic.llm.LlmTurnPlanner
 import com.unciv.ui.components.extensions.toTextButton
+import com.unciv.ui.components.extensions.disable
 import com.unciv.ui.components.input.onClick
+import com.unciv.ui.images.ImageGetter
 import com.unciv.ui.popups.hasOpenPopups
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.worldscreen.WorldScreen
@@ -32,7 +34,7 @@ class LlmPanel(private val worldScreen: WorldScreen) : Table() {
 
     init {
         background = BaseScreen.skinStrings.getUiBackground(
-            "WorldScreen/LlmPanel", tintColor = Color.CHARCOAL)
+            "WorldScreen/LlmPanel", tintColor = ImageGetter.CHARCOAL)
         pad(8f)
         defaults().left().padBottom(4f)
         build()
@@ -66,7 +68,7 @@ class LlmPanel(private val worldScreen: WorldScreen) : Table() {
         add(statusLabel).growX().row()
 
         val runButton = "AI 操作本回合".toTextButton()
-        runButton.isDisabled = busy
+        if (busy) runButton.disable()
         runButton.onClick { runAiTurn() }
         add(runButton).growX().row()
 

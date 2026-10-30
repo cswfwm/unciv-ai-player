@@ -4,6 +4,9 @@ import com.unciv.logic.llm.LlmClient
 import com.unciv.logic.llm.LlmSettingsHolder
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.extensions.toTextButton
+import com.unciv.ui.components.extensions.disable
+import com.unciv.ui.components.extensions.enable
+import com.unciv.ui.components.input.onChange
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.widgets.UncivTextField
 import com.unciv.utils.Concurrency
@@ -54,11 +57,11 @@ internal class LlmTab(
         val field = UncivTextField(label, initial)
         field.maxLength = 500
         val button = "Enter".toTextButton()
-        button.isEnabled = false
-        field.onChange { button.isEnabled = field.text != initial }
+        button.disable()
+        field.onChange { if (field.text != initial) button.enable() else button.disable() }
         button.onClick {
             save(field.text.trim())
-            button.isEnabled = false
+            button.disable()
         }
         addWrapped {
             add(label.toLabel())
