@@ -71,8 +71,10 @@ object LlmClient {
 
     fun parseContent(rawBody: String): Result<String> = try {
         val root = json.parseToJsonElement(rawBody).jsonObject
-        val content = root["choices"]?.jsonArrayToObject()?.firstOrNull()
-            ?.get("message")?.jsonObject?.get("content")?.jsonPrimitive?.content
+        val choices = root["choices"] as? JsonArray ?: return Result.failure(
+            IllegalStateException("No choices in response"))
+        val content = (choices.firstOrNull() as? JsonObject)?.get("message")
+            ?.jsonObject?.get("content")?.jsonPrimitive?.content
         if (content.isNullOrBlank())
             Result.failure(IllegalStateException("Empty completion content"))
         else
@@ -80,7 +82,4 @@ object LlmClient {
     } catch (ex: Exception) {
         Result.failure(ex)
     }
-
-    private fun JsonArray.jsonArrayToObject(): List<JsonObject> =
-        this.mapNotNull { it as? JsonObject }
 }
