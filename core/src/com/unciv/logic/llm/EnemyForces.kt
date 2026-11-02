@@ -26,6 +26,7 @@ object EnemyForces {
                 )
             }
             .sortedByDescending { it.total }
+            .toList()
 
     fun summary(strengths: List<Strength>): String {
         if (strengths.isEmpty()) return "当前没有交战中的文明"
