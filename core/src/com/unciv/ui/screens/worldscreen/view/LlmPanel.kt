@@ -4,6 +4,7 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.utils.Align
+import com.unciv.logic.llm.EnemyForces
 import com.unciv.logic.llm.LlmDecisionGranularity
 import com.unciv.logic.llm.LlmSettingsHolder
 import com.unciv.logic.llm.LlmTurnPlanner
@@ -31,6 +32,7 @@ class LlmPanel(private val worldScreen: WorldScreen) : Table() {
 
     private val statusLabel = Label("", BaseScreen.skin)
     private val logLabel = Label("", BaseScreen.skin)
+    private val enemyLabel = Label("", BaseScreen.skin)
     private var expanded = true
     private var busy = false
 
@@ -68,6 +70,19 @@ class LlmPanel(private val worldScreen: WorldScreen) : Table() {
 
         statusLabel.setText(statusText())
         add(statusLabel).growX().row()
+
+        val enemyStrengths = EnemyForces.of(worldScreen.selectedGameView.civView.getCiv())
+        enemyLabel.setText(
+            if (enemyStrengths.isEmpty()) "敌方兵力：无交战"
+            else "敌方兵力：军事 ${enemyStrengths.sumOf { it.military }}" +
+                "，平民 ${enemyStrengths.sumOf { it.civilian }}")
+        add(enemyLabel).growX().row()
+
+        val chatButton = "AI 问答".toTextButton()
+        chatButton.onClick {
+            LlmChatPopup(worldScreen, settings).open()
+        }
+        add(chatButton).growX().row()
 
         val runButton = "AI 操作本回合".toTextButton()
         if (busy) runButton.disable()
