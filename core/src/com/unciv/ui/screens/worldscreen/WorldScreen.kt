@@ -642,6 +642,7 @@ class WorldScreen(
         if (::llmPanel.isInitialized && llmPanel.isVisible) {
             llmPanel.refreshPosition()
             llmPanel.maybeRunAutomaticTurn()
+            llmPanel.askPendingWarDeclarations()
         }
 
         val coveredNotificationsTop = stage.height - statusButtons.y

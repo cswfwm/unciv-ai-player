@@ -1,9 +1,14 @@
 package com.unciv.ui.components.tilegroups.layers
 
+import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.scenes.scene2d.ui.Label
+import com.badlogic.gdx.utils.Align
 import com.unciv.UncivGame
+import com.unciv.logic.llm.LlmSettingsHolder
 import com.unciv.view.CivView
 import com.unciv.view.ForeignMapUnitView
 import com.unciv.ui.components.NonTransformGroup
+import com.unciv.ui.components.fonts.Fonts
 import com.unciv.ui.components.tilegroups.TileGroup
 import com.unciv.ui.images.ImageGetter
 
@@ -17,6 +22,11 @@ class TileLayerUnitSprite(tileGroup: TileGroup, size: Float) : TileLayer(tileGro
     // Slots are only filled if units exist, and images for those units exist
     private var civilianSlot: UnitSpriteSlot? = null
     private var militarySlot: UnitSpriteSlot? = null
+
+    /** Radar marker blip, drawn on Enemy units that the viewer cannot actually see. */
+    private var radarBlip: Label? = null
+    /** Unit call-sign label, shown when the player enables unit names. */
+    private var unitNameLabel: Label? = null
 
 
     fun getSpriteSlot(unitView: ForeignMapUnitView) = if (unitView.isCivilian()) civilianSlot else militarySlot
@@ -80,7 +90,55 @@ class TileLayerUnitSprite(tileGroup: TileGroup, size: Float) : TileLayer(tileGro
 
         civilianSlot = updateSlot(civilianSlot, tileGroup.tileView.civilianUnit, isShown = isCivilianSlotShown)
         militarySlot = updateSlot(militarySlot, tileGroup.tileView.militaryUnit, isShown = isMilitarySlotShown)
+
+        updateRadarAndName(viewingCiv, isViewable)
     }
+
+    /**
+     * Radar: shows a blip on every enemy unit, including ones standing outside the viewer's sight
+     * range. Unit names are drawn on top when enabled. Both are pure overlays - they never change
+     * what the game state reports, only what the player sees.
+     */
+    private fun updateRadarAndName(viewingCiv: CivView?, isViewable: Boolean) {
+        val unitView = tileGroup.tileView.militaryUnit ?: tileGroup.tileView.civilianUnit
+        val viewerCiv = viewingCiv?.getCiv()
+
+        val showBlip = LlmSettingsHolder.isEnemyRadarEnabled() && unitView != null &&
+            viewerCiv != null && unitView.civ().getCiv() != viewerCiv && !unitView.civ().isBarbarian()
+
+        if (showBlip) {
+            val label = radarBlip ?: Label("\u25C6", Label.LabelStyle(Fonts.font, Color.RED)).apply {
+                setAlignment(Align.center)
+                addOwnedActor(this)
+            }
+            label.setPosition(tileX + tileGroup.hexagonImagePosition.first,
+                tileY + tileGroup.hexagonImagePosition.second)
+            label.setSize(hexagonWidth(), hexagonWidth())
+            label.isVisible = true
+            radarBlip = label
+        } else {
+            radarBlip?.let { removeOwnedActor(it); it.remove() }
+            radarBlip = null
+        }
+
+        val showName = LlmSettingsHolder.isUnitNamesEnabled() && isViewable && unitView != null
+        if (showName) {
+            val label = unitNameLabel ?: Label("", Label.LabelStyle(Fonts.font, Color.WHITE)).apply {
+                addOwnedActor(this)
+            }
+            label.setText(unitView.name)
+            label.setPosition(tileX + tileGroup.hexagonImagePosition.first,
+                tileY + tileGroup.hexagonImagePosition.second + tileGroup.hexagonImageWidth * 0.5f)
+            label.setSize(hexagonWidth(), tileGroup.hexagonImageWidth * 0.25f)
+            label.isVisible = true
+            unitNameLabel = label
+        } else {
+            unitNameLabel?.let { removeOwnedActor(it); it.remove() }
+            unitNameLabel = null
+        }
+    }
+
+    private fun hexagonWidth() = tileGroup.hexagonImageWidth
 
     override fun determineVisibility() {
         isVisible = civilianSlot != null || militarySlot != null

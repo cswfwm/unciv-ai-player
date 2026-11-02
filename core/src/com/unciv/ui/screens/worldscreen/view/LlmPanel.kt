@@ -7,10 +7,12 @@ import com.badlogic.gdx.utils.Align
 import com.unciv.logic.llm.LlmDecisionGranularity
 import com.unciv.logic.llm.LlmSettingsHolder
 import com.unciv.logic.llm.LlmTurnPlanner
+import com.unciv.logic.llm.WarDeclarations
 import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.extensions.disable
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.images.ImageGetter
+import com.unciv.ui.popups.ConfirmPopup
 import com.unciv.ui.popups.hasOpenPopups
 import com.unciv.ui.screens.basescreen.BaseScreen
 import com.unciv.ui.screens.worldscreen.WorldScreen
@@ -94,6 +96,24 @@ class LlmPanel(private val worldScreen: WorldScreen) : Table() {
         }
         add(revealButton).growX().row()
 
+        val radarButton = (if (settings.showEnemyRadar) "敌方雷达：开" else "敌方雷达：关").toTextButton()
+        radarButton.onClick {
+            LlmSettingsHolder.setEnemyRadar(!settings.showEnemyRadar)
+            worldScreen.shouldUpdate = true
+            build()
+            refreshPosition()
+        }
+        add(radarButton).growX().row()
+
+        val namesButton = (if (settings.showUnitNames) "单位名称：开" else "单位名称：关").toTextButton()
+        namesButton.onClick {
+            LlmSettingsHolder.setUnitNames(!settings.showUnitNames)
+            worldScreen.shouldUpdate = true
+            build()
+            refreshPosition()
+        }
+        add(namesButton).growX().row()
+
         logLabel.setAlignment(Align.topLeft)
         logLabel.wrap = true
         add(logLabel).growX().width(220f).row()
@@ -107,6 +127,23 @@ class LlmPanel(private val worldScreen: WorldScreen) : Table() {
         if (!settings.autoPlayEachTurn || busy || !settings.isConfigured()) return
         if (!worldScreen.isPlayersTurn || worldScreen.hasOpenPopups()) return
         runAiTurn()
+    }
+
+    /** Asks the player about wars the AI wanted to start. Called from WorldScreen.update. */
+    fun askPendingWarDeclarations() {
+        if (worldScreen.hasOpenPopups()) return
+        if (!worldScreen.isPlayersTurn) return
+        val target = WarDeclarations.poll() ?: return
+        val civ = worldScreen.selectedGameView.civView.getCiv()
+        ConfirmPopup(
+            worldScreen,
+            "AI wants to declare war on [${target.civName}]. Declare war?",
+            "Declare war",
+            isConfirmPositive = false
+        ) {
+            civ.getDiplomacyManager(target)?.declareWar()
+            worldScreen.shouldUpdate = true
+        }.open(true)
     }
 
     private fun statusText(): String = when {        !settings.isConfigured() -> "未配置接口"

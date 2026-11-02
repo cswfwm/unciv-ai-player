@@ -46,7 +46,12 @@ object LlmTurnPlanner {
     ): Outcome {
         val granularity = settings.granularityOrDefault()
         val state = StateSerializer.describe(civ.gameInfo, civ)
-        val answer = LlmClient.complete(settings, SYSTEM_PROMPT, buildPrompt(granularity, state))
+        val warPolicy = if (settings.confirmWarDeclarations)
+            "Wars are proposed to the player for approval, never declared silently."
+        else
+            "Wars may be declared directly."
+        val answer = LlmClient.complete(
+            settings, SYSTEM_PROMPT, buildPrompt(granularity, state, warPolicy))
 
         if (answer.isFailure) {
             val message = answer.exceptionOrNull()?.message ?: "unknown error"
@@ -80,13 +85,15 @@ object LlmTurnPlanner {
         return Outcome(applied, fallbackUsed = false)
     }
 
-    private fun buildPrompt(granularity: LlmDecisionGranularity, state: String): String =
-        if (granularity == LlmDecisionGranularity.Direction)
+    private fun buildPrompt(granularity: LlmDecisionGranularity, state: String, warPolicy: String): String {
+        val task = if (granularity == LlmDecisionGranularity.Direction)
             "Decide the strategic direction for this turn: research, policy and overall focus. " +
-                "Fill in only \"research\", \"policy\" and \"reasoning\".\n\n$state"
+                "Fill in only \"research\", \"policy\" and \"reasoning\"."
         else
             "Decide the full turn, including a build order for every city and a destination for " +
-                "each unit that needs orders.\n\n$state"
+                "each unit that needs orders."
+        return "$task $warPolicy\n\n$state"
+    }
 
     private fun parsePlan(raw: String): JsonObject? = try {
         val cleaned = raw.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()

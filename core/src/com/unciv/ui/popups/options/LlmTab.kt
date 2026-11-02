@@ -1,5 +1,7 @@
 package com.unciv.ui.popups.options
 
+import com.badlogic.gdx.Gdx
+import com.badlogic.gdx.graphics.Color
 import com.unciv.logic.llm.LlmClient
 import com.unciv.logic.llm.LlmSettingsHolder
 import com.unciv.ui.components.extensions.toLabel
@@ -9,6 +11,8 @@ import com.unciv.ui.components.extensions.enable
 import com.unciv.ui.components.input.onChange
 import com.unciv.ui.components.input.onClick
 import com.unciv.ui.components.widgets.UncivTextField
+import com.unciv.ui.popups.ConfirmPopup
+import com.unciv.utils.isUUID
 import com.unciv.utils.Concurrency
 import com.unciv.utils.launchOnGLThread
 
@@ -41,6 +45,18 @@ internal class LlmTab(
             LlmSettingsHolder.loadFromSettings()
         }
 
+        addCheckbox("Show enemy radar", settings.llm::showEnemyRadar, updateWorld = true) {
+            LlmSettingsHolder.loadFromSettings()
+        }
+
+        addCheckbox("Show unit names", settings.llm::showUnitNames, updateWorld = true) {
+            LlmSettingsHolder.loadFromSettings()
+        }
+
+        addCheckbox("Ask before declaring war", settings.llm::confirmWarDeclarations)
+
+        addPlayerIdImport()
+
         addWrapped {
             add("Test connection".toTextButton().apply {
                 onClick { testConnection() }
@@ -52,22 +68,59 @@ internal class LlmTab(
         super.lateInitialize()
     }
 
-    /** Label plus text field plus an explicit save button, mirroring the custom mod prefix row. */
+    /** Label plus text field, a clipboard paste button and an explicit save button. */
     private fun addTextSetting(label: String, initial: String, save: (String) -> Unit) {
         val field = UncivTextField(label, initial)
         field.maxLength = 500
-        val button = "Enter".toTextButton()
-        button.disable()
-        field.onChange { if (field.text != initial) button.enable() else button.disable() }
-        button.onClick {
+        val pasteButton = "Paste".toTextButton()
+        val saveButton = "Enter".toTextButton()
+        saveButton.disable()
+        field.onChange { if (field.text != initial) saveButton.enable() else saveButton.disable() }
+        pasteButton.onClick {
+            val clipboard = Gdx.app.clipboard.contents?.trim()
+            if (clipboard.isNullOrEmpty()) return@onClick
+            field.setText(clipboard)
+            saveButton.enable()
+        }
+        saveButton.onClick {
             save(field.text.trim())
-            button.disable()
+            saveButton.disable()
         }
         addWrapped {
             add(label.toLabel())
             add(field).growX().padRight(5f)
-            add(button)
+            add(pasteButton).padRight(5f)
+            add(saveButton)
         }
+    }
+
+    /** Import an existing multiplayer player ID from the clipboard, reusing the game's own flow. */
+    private fun addPlayerIdImport() {
+        addHeader("Player ID")
+
+        val idLabel = "".toLabel()
+        addWrapped {
+            add("Take user ID from clipboard".toTextButton().apply {
+                onClick {
+                    val clipboard = Gdx.app.clipboard.contents?.trim()
+                    if (clipboard == null || !clipboard.isUUID()) {
+                        idLabel.setFontColor(Color.RED)
+                        idLabel.setText("Invalid ID!")
+                        return@onClick
+                    }
+                    ConfirmPopup(
+                        stage,
+                        "Doing this will reset your current user ID to the clipboard contents - are you sure?",
+                        "Take user ID from clipboard"
+                    ) {
+                        settings.multiplayer.setUserId(clipboard)
+                        idLabel.setFontColor(Color.WHITE)
+                        idLabel.setText("ID successfully set!")
+                    }.open(true)
+                }
+            })
+        }
+        add(idLabel).colspan(2).left().row()
     }
 
     private fun testConnection() {

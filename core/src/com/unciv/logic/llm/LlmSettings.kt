@@ -29,6 +29,15 @@ class LlmSettings {
     /** Request timeout in seconds. Reasoning stations can be slow on large prompts. */
     var timeoutSeconds: Int = 120
 
+    /** Radar: mark enemy units on the map regardless of exploration. */
+    var showEnemyRadar: Boolean = false
+
+    /** Show a name label above each unit on the map. */
+    var showUnitNames: Boolean = false
+
+    /** Ask the player before the AI starts a war instead of declaring it directly. */
+    var confirmWarDeclarations: Boolean = true
+
     fun granularityOrDefault(): LlmDecisionGranularity =
         LlmDecisionGranularity.entries.firstOrNull { it.name == granularity }
             ?: LlmDecisionGranularity.Direction

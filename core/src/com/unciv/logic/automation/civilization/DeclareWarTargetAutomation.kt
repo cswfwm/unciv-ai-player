@@ -9,6 +9,8 @@ import com.unciv.logic.trade.TradeRequest
 import com.unciv.logic.trade.TradeOfferType
 import com.unciv.ui.screens.victoryscreen.RankingType
 import com.unciv.view.CivView
+import com.unciv.logic.llm.LlmSettingsHolder
+import com.unciv.logic.llm.WarDeclarations
 
 object DeclareWarTargetAutomation {
 
@@ -108,6 +110,12 @@ object DeclareWarTargetAutomation {
     private fun declareWar(civView: CivView, target: Civilization, motivation: Float): Boolean {
         val civInfo = civView.getCiv()
         if (DeclareWarPlanEvaluator.evaluateDeclareWarPlan(civInfo, target, motivation) > 0) {
+            // A human player's civ under AI control must approve wars instead of being dragged
+            // into them; the question is asked on the GL thread and executed only if accepted.
+            if (civInfo.isHuman() && LlmSettingsHolder.current.confirmWarDeclarations) {
+                WarDeclarations.request(target)
+                return true
+            }
             civInfo.getDiplomacyManager(target)!!.declareWar()
             return true
         }
