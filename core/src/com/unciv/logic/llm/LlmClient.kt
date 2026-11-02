@@ -54,7 +54,7 @@ object LlmClient {
         }
 
         return try {
-            val response = UncivKtor.client.post(settings.baseUrl) {
+            val response = UncivKtor.client.post(normalizeEndpoint(settings.baseUrl)) {
                 contentType(ContentType.Application.Json)
                 header(HttpHeaders.Authorization, "Bearer ${settings.apiKey}")
                 setBody(payload.toString())
@@ -67,6 +67,20 @@ object LlmClient {
             Log.error("LLM request failed: ${ex.message}")
             Result.failure(ex)
         }
+    }
+
+    /**
+     * Relays are usually documented as a base URL (`https://host/v1`) or a bare host. Posting to
+     * those yields a 301 from the relay, and a redirected POST turns into a GET, so the API never
+     * answers. Complete the path here instead of trusting what the user typed.
+     */
+    fun normalizeEndpoint(raw: String): String {
+        val trimmed = raw.trim()
+        if (trimmed.isEmpty()) return trimmed
+        val withoutTrailingSlash = trimmed.trimEnd('/')
+        if (withoutTrailingSlash.endsWith("/chat/completions")) return withoutTrailingSlash
+        if (withoutTrailingSlash.endsWith("/v1")) return "$withoutTrailingSlash/chat/completions"
+        return "$withoutTrailingSlash/v1/chat/completions"
     }
 
     fun parseContent(rawBody: String): Result<String> = try {

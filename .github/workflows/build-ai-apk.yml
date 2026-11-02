@@ -1,4 +1,4 @@
-name: Build AI APK
+name: Build APK
 
 on:
   push:
@@ -23,17 +23,15 @@ jobs:
         run: |
           echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
 
-      - name: Generate signing keystore
+      # The keystore is a repository secret so every build is signed with the same key.
+      # A fresh key per build would make each APK un-installable over the previous one.
+      - name: Restore signing keystore
         run: |
-          keytool -genkeypair -v \
-            -keystore "$RUNNER_TEMP/release.jks" -storetype JKS \
-            -alias uncivai -keyalg RSA -keysize 2048 -validity 36500 \
-            -storepass uncivai123 -keypass uncivai123 \
-            -dname "CN=Unciv AI, OU=Dev, O=UncivAI, L=CN, ST=CN, C=CN"
+          echo "${{ secrets.CI_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/release.jks"
           echo "CI_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
-          echo "CI_KEYSTORE_PASSWORD=uncivai123" >> "$GITHUB_ENV"
-          echo "CI_KEY_ALIAS=uncivai" >> "$GITHUB_ENV"
-          echo "CI_KEY_PASSWORD=uncivai123" >> "$GITHUB_ENV"
+          echo "CI_KEYSTORE_PASSWORD=${{ secrets.CI_KEYSTORE_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "CI_KEY_ALIAS=${{ secrets.CI_KEY_ALIAS }}" >> "$GITHUB_ENV"
+          echo "CI_KEY_PASSWORD=${{ secrets.CI_KEY_PASSWORD }}" >> "$GITHUB_ENV"
 
       - name: Build release APK
         run: ./gradlew :android:assembleRelease --no-daemon --stacktrace
@@ -41,6 +39,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: unciv-ai-release
+          name: uncivx-release
           path: android/build/outputs/apk/release/*.apk
           retention-days: 30
