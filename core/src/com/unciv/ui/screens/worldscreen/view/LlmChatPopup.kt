@@ -11,6 +11,8 @@ import com.unciv.logic.llm.EnemyForces
 import com.unciv.logic.llm.LlmClient
 import com.unciv.logic.llm.LlmSettings
 import com.unciv.logic.llm.StateSerializer
+import com.unciv.ui.components.extensions.disable
+import com.unciv.ui.components.extensions.enable
 import com.unciv.ui.components.extensions.toLabel
 import com.unciv.ui.components.extensions.toTextButton
 import com.unciv.ui.components.input.onClick
@@ -47,7 +49,7 @@ class LlmChatPopup(
         scrollPane.setFadeScrollBars(false)
         scrollPane.setScrollingDisabled(true, false)
         add(scrollPane).colspan(2)
-            .size(0.6f * stage.width, 0.45f * stage.height)
+            .size(0.6f * stageToShowOn.width, 0.45f * stageToShowOn.height)
             .expand().fill().row()
 
         add(inputField).expandX().fillX()
@@ -92,7 +94,7 @@ class LlmChatPopup(
         inputField.setText("")
         appendLine("我", question)
         waiting = true
-        sendButton.isDisabled = true
+        sendButton.disable()
 
         val civ = worldScreen.selectedGameView.civView.getCiv()
         val state = StateSerializer.describe(civ.gameInfo, civ)
@@ -107,7 +109,7 @@ class LlmChatPopup(
             )
             launchOnGLThread {
                 waiting = false
-                sendButton.isDisabled = false
+                sendButton.enable()
                 appendLine("AI", result.getOrNull() ?: "请求失败：${result.exceptionOrNull()?.message}")
             }
         }
