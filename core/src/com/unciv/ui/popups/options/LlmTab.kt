@@ -104,7 +104,7 @@ internal class LlmTab(
                 onClick {
                     val clipboard = Gdx.app.clipboard.contents?.trim()
                     if (clipboard == null || !clipboard.isUUID()) {
-                        idLabel.setFontColor(Color.RED)
+                        idLabel.color = Color.RED
                         idLabel.setText("Invalid ID!")
                         return@onClick
                     }
@@ -114,7 +114,7 @@ internal class LlmTab(
                         "Take user ID from clipboard"
                     ) {
                         settings.multiplayer.setUserId(clipboard)
-                        idLabel.setFontColor(Color.WHITE)
+                        idLabel.color = Color.WHITE
                         idLabel.setText("ID successfully set!")
                     }.open(true)
                 }
